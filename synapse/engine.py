@@ -6,6 +6,7 @@ Orchestrator → Coder → Reviewer のターンベースループ
 import json
 import os
 from datetime import datetime
+from typing import Any
 
 import anthropic
 from dotenv import load_dotenv
@@ -21,10 +22,10 @@ load_dotenv()
 
 def run_synapse(user_goal: str) -> Sandbox:
     result = run_synapse_with_callback(user_goal, callback=None)
-    return result["sandbox"]
+    return result["sandbox"]  # type: ignore[no-any-return]
 
 
-def run_synapse_with_callback(user_goal: str, callback=None) -> dict:
+def run_synapse_with_callback(user_goal: str, callback: Any = None) -> dict[str, Any]:
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
     sandbox = Sandbox()
 
@@ -47,7 +48,7 @@ def run_synapse_with_callback(user_goal: str, callback=None) -> dict:
     log(f"Goal: {user_goal}")
     log("=" * 60 + "\n")
 
-    result = {
+    result: dict[str, Any] = {
         "sandbox": sandbox,
         "files": {},
         "approved": False,

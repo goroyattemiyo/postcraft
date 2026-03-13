@@ -28,8 +28,8 @@ class Sandbox:
             return f"Error: {path} not found"
         content = file_path.read_text(encoding="utf-8")
         if len(content) > MAX_FILE_READ_SIZE:
-            return content[:MAX_FILE_READ_SIZE] + "\n...(truncated)"
-        return content
+            return str(content[:MAX_FILE_READ_SIZE]) + "\n...(truncated)"
+        return str(content)
 
     def run_command(self, command: str) -> str:
         try:
