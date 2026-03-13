@@ -9,13 +9,17 @@ from synapse.config import MAX_TOKENS, MAX_TOOL_ITERATIONS
 from synapse.tools import execute_tool
 
 
-def run_agent(client, model, system, messages, tools, sandbox, log_fn, max_iterations=None):
+def run_agent(
+    client, model, system, messages, tools, sandbox, log_fn, max_iterations=None, max_tokens=None
+):
     if max_iterations is None:
         max_iterations = MAX_TOOL_ITERATIONS
+    if max_tokens is None:
+        max_tokens = MAX_TOKENS
 
     kwargs = {
         "model": model,
-        "max_tokens": MAX_TOKENS,
+        "max_tokens": max_tokens,
         "system": system,
         "messages": list(messages),
     }
