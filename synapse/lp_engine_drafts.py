@@ -1,9 +1,11 @@
 """
 Synapse - LP生成エンジン Phase B
 二段構成: HTMLパースで素材テキスト抽出 -> AIでプラットフォーム最適化
++ 画像化パイプライン接続
 """
 
 import json
+import os
 from typing import Any
 
 from synapse.agents import run_agent
@@ -13,7 +15,12 @@ from synapse.draft_generator import (
     generate_note_draft,
     generate_posting_guide,
 )
-from synapse.image_pipeline import extract_sections
+from synapse.image_pipeline import (
+    HAS_PLAYWRIGHT,
+    capture_sections,
+    extract_sections,
+    generate_manual_screenshot_guide,
+)
 from synapse.lp_prompts import LP_CODER_SYSTEM, LP_REVIEWER_SYSTEM
 from synapse.sandbox import Sandbox
 from synapse.tools import CODER_TOOLS, REVIEWER_TOOLS
@@ -28,7 +35,7 @@ def run_phase_b(
     notify: Any,
     log: Any,
 ) -> None:
-    """Phase B: HTMLパース -> 素材生成 -> AI最適化 -> Reviewer検証。"""
+    """Phase B: HTMLパース -> 素材生成 -> AI最適化 -> 画像生成 -> Reviewer検証。"""
     notify("System", "=== Phase B: ドラフト生成（二段構成） ===")
 
     # Step 1: HTMLパースで素材テキスト生成
@@ -38,13 +45,21 @@ def run_phase_b(
 
     raw_brain = generate_brain_draft(html_content, sections)
     raw_note = generate_note_draft(html_content, sections)
+
+    # Step 2: 画像化パイプライン
+    image_files = _run_image_pipeline(sandbox, sections, notify, log)
+    result["image_files"] = image_files
+
+    # Step 3: 投稿ガイド生成（画像有無に応じて内容を変える）
     posting_guide = generate_posting_guide(sections, raw_brain, raw_note)
-
-    # posting_guide.md は決定論的生成（AI不経由）
+    if not HAS_PLAYWRIGHT:
+        html_path = os.path.join(sandbox.workspace, "lp.html")
+        manual_guide = generate_manual_screenshot_guide(html_path, sections)
+        posting_guide = posting_guide + chr(10) * 2 + manual_guide
     sandbox.write_file("posting_guide.md", posting_guide)
-    notify("System", "posting_guide.md 生成完了（HTMLパースベース）")
+    notify("System", "posting_guide.md 生成完了")
 
-    # Step 2: 素材テキストをAIに渡してプラットフォーム最適化
+    # Step 4: 素材テキストをAIに渡してプラットフォーム最適化
     reviewer_reply = ""
     for draft_round in range(1, LP_DRAFT_ROUNDS + 1):
         notify("System", f"--- Phase B Round {draft_round}/{LP_DRAFT_ROUNDS} ---")
@@ -88,8 +103,33 @@ def run_phase_b(
             break
     else:
         notify("System", f"Phase B: {LP_DRAFT_ROUNDS}ラウンドでドラフト承認に至らず")
-        # フォールバック: AI最適化失敗時は素材テキストをそのまま使用
         _write_fallback(sandbox, raw_brain, raw_note, notify)
+
+
+def _run_image_pipeline(
+    sandbox: Sandbox,
+    sections: list[dict[str, str]],
+    notify: Any,
+    log: Any,
+) -> list[str]:
+    """lp.htmlからセクション画像を生成する。"""
+    html_path = os.path.join(sandbox.workspace, "lp.html")
+    output_dir = os.path.join(sandbox.workspace, "sections")
+
+    if HAS_PLAYWRIGHT:
+        notify("System", "Playwright検出: セクション画像を自動生成中...")
+        try:
+            images = capture_sections(html_path, output_dir)
+            notify("System", f"画像生成完了: {len(images)}枚")
+            log(f"Generated images: {images}")
+            return images
+        except Exception as e:
+            notify("System", f"画像生成エラー: {e}（手動ガイドにフォールバック）")
+            log(f"Image pipeline error: {e}")
+            return []
+    else:
+        notify("System", "Playwright未検出: 手動スクリーンショットガイドを生成")
+        return []
 
 
 def _build_optimization_prompt(raw_brain: str, raw_note: str) -> str:

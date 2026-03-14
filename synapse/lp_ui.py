@@ -3,6 +3,7 @@ Synapse - LP生成UI（Streamlit）
 """
 
 import io
+import os
 import zipfile
 
 import streamlit as st
@@ -82,8 +83,17 @@ def _render_results(result: dict):
             else:
                 st.code(content)
 
+    # 画像プレビュー
+    image_files = result.get("image_files", [])
+    if image_files:
+        st.divider()
+        st.subheader("セクション画像")
+        for img_path in image_files:
+            if os.path.exists(img_path):
+                st.image(img_path, caption=os.path.basename(img_path))
+
     st.divider()
-    zip_buffer = _create_zip(files)
+    zip_buffer = _create_zip(files, image_files)
     st.download_button(
         label="全ファイルをZIPダウンロード",
         data=zip_buffer,
@@ -98,12 +108,20 @@ def _render_results(result: dict):
     st.caption(f"ラウンド数: {rounds} | 承認: {approved} | ログ: {log_path}")
 
 
-def _create_zip(files: dict[str, str]) -> bytes:
-    """ファイル辞書からZIPバイトを生成する。"""
+def _create_zip(
+    files: dict[str, str],
+    image_files: list[str] | None = None,
+) -> bytes:
+    """ファイル辞書と画像ファイルからZIPバイトを生成する。"""
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         for name, content in files.items():
             zf.writestr(name, content)
+        if image_files:
+            for img_path in image_files:
+                if os.path.exists(img_path):
+                    arcname = "sections/" + os.path.basename(img_path)
+                    zf.write(img_path, arcname)
     return buffer.getvalue()
 
 
