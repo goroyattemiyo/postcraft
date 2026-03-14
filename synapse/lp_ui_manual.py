@@ -98,7 +98,9 @@ def _step2_prompt():
 
     st.success("以下のプロンプトをコピーして、**Claude** や **ChatGPT** に貼り付けてください。")
     st.code(prompt, language="text")
-    st.caption("💡 AIがHTMLコードを出力したら、次のステップで貼り付けます。")
+    st.caption(
+        "💡 AIがHTMLを出力したら、ブラウザで確認してください。デザインが気に入らなければAIチャット上で修正を指示し、納得いくまで調整してからStep 3へ。"
+    )
 
     col1, col2 = st.columns(2)
     if col1.button("▶️ Step 3へ進む", type="primary", use_container_width=True):
@@ -112,7 +114,9 @@ def _step2_prompt():
 def _step3_paste():
     """Step 3: HTML貼り付け。"""
     st.markdown("### 📥 AIが生成したHTMLを貼り付け")
-    st.info("AIチャットが出力した **HTMLコード全体** をコピーして、下に貼り付けてください。")
+    st.info(
+        "AIチャットで調整が完了した **最終版のHTMLコード** を丸ごと貼り付けてください。ここに貼ったHTMLがBrain/Note素材の元になります。"
+    )
 
     html_input = st.text_area(
         "HTMLコード",
