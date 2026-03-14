@@ -4,8 +4,8 @@ Synapse - 画像化パイプライン
 
 import os
 import re
-from typing import Any
 from pathlib import Path
+from typing import Any
 
 try:
     from playwright.sync_api import sync_playwright
